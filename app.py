@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_curve, auc, confusion_matrix
+from sklearn.metrics import roc_curve, auc, confusion_matrix, classification_report
 from xgboost import XGBClassifier, plot_tree
 
 # streamlit title and icon
@@ -95,10 +95,13 @@ if st.button("Predict Habitability"):
 tab1, tab2 = st.tabs(["📈 Model Insights", "🧪 Validation"])
 
 with tab1:
-    st.subheader("Example Decision Tree")
-    fig, ax = plt.subplots(figsize=(14, 8))
-    plot_tree(xgb, num_trees=0, ax=ax)
-    st.pyplot(fig, use_container_width=True)
+    st.subheader("Classification Report")
+    y_pred = xgb.predict(X_test)
+    report = classification_report(y_test, y_pred, output_dict=True)
+
+    # Turn into DataFrame for nicer display
+    report_df = pd.DataFrame(report).transpose()
+    st.dataframe(report_df.style.format("{:.2f}"))
 
 with tab2:
     st.subheader("ROC Curve & Confusion Matrix")
