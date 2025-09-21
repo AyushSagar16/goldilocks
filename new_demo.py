@@ -32,17 +32,15 @@ xgb = XGBClassifier(
     eval_metric="logloss",
 )
 
-clf = Pipeline([("preprocessor", preprocessor), ("classifier", xgb)])
-
 @st.cache_resource(show_spinner=False)
 def fit_model():
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
-    clf.fit(X_train, y_train)
-    return clf, X_train, X_test, y_train, y_test
+    xgb.fit(X_train, y_train)
+    return xgb, X_train, X_test, y_train, y_test
 
-clf, X_train, X_test, y_train, y_test = fit_model()
+xgb, X_train, X_test, y_train, y_test = fit_model()
 
 # ---------- Sidebar description ----------
 st.sidebar.header("📖 Description of Model")
@@ -86,9 +84,9 @@ user_df = pd.DataFrame([{
 
 # ---------- Predict ----------
 if st.button("🔮 Predict Habitability"):
-    proba = clf.predict_proba(user_df)[0]
+    proba = xgb.predict_proba(user_df)[0]
     p1 = float(proba[1])
-    pred = int(clf.predict(user_df)[0])
+    pred = int(xgb.predict(user_df)[0])
 
     
     
@@ -102,32 +100,14 @@ if st.button("🔮 Predict Habitability"):
 tab1, tab2 = st.tabs(["📈 Model Insights", "🧪 Validation"])
 
 with tab1:
-    st.subheader("Feature Importance (gain)")
-    booster = clf.named_steps["classifier"].get_booster()
-    raw_imp = booster.get_score(importance_type="gain")
-    feat_names = clf.named_steps["preprocessor"].get_feature_names_out()
-    nice_names = [n.split("__",1)[1] if "__" in n else n for n in feat_names]
-    idx_map = {f"f{i}": nice_names[i] for i in range(len(nice_names))}
-    mapped = {idx_map[k]: v for k, v in raw_imp.items() if k in idx_map}
-    if mapped:
-        top = sorted(mapped.items(), key=lambda kv: kv[1], reverse=True)[:10]
-        names, vals = zip(*top)
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        ax.barh(names[::-1], vals[::-1])
-        ax.set_xlabel("Gain"); ax.set_title("Top Features")
-        st.pyplot(fig, use_container_width=True)
-    else:
-        st.info("No feature importance available yet.")
-
-    if st.checkbox("Show first tree (illustrative)"):
-        st.subheader("First tree")
-        fig, ax = plt.subplots(figsize=(14, 8))
-        plot_tree(clf.named_steps["classifier"], num_trees=0, rankdir="LR", ax=ax)
-        st.pyplot(fig, use_container_width=True)
+    st.subheader("First tree")
+    fig, ax = plt.subplots(figsize=(14, 8))
+    plot_tree(xgb, num_trees=0, rankdir="LR", ax=ax)
+    st.pyplot(fig, use_container_width=True)
 
 with tab2:
     st.subheader("ROC Curve & Confusion Matrix")
-    y_proba = clf.predict_proba(X_test)[:, 1]
+    y_proba = xgb.predict_proba(X_test)[:, 1]
     fpr, tpr, _ = roc_curve(y_test, y_proba)
     roc_auc = auc(fpr, tpr)
 
@@ -140,7 +120,7 @@ with tab2:
         ax.set_title("ROC Curve"); ax.legend(loc="lower right")
         st.pyplot(fig, use_container_width=True)
     with c2:
-        y_pred_thr = clf.predict(X_test)
+        y_pred_thr = xgb.predict(X_test)
         cm = confusion_matrix(y_test, y_pred_thr, labels=[0,1])
         fig, ax = plt.subplots()
         im = ax.imshow(cm, cmap="Blues")
