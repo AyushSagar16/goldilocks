@@ -1,30 +1,24 @@
 import streamlit as st
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from xgboost import XGBClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from xgboost import XGBClassifier
 
 # =============================
-# 1. Load Data & Train Model
+# 1. Load Data
 # =============================
-df = pd.read_csv("Exoplanet_Dataset_Cleaned.csv")
+df = pd.read_csv("Exoplanet_Dataset_Cleaned_Filtered.csv")
 
 X = df.drop(columns=["pl_name", "pl_hab"])
 y = df["pl_hab"]
 
-categorical = X.select_dtypes(include=["object"]).columns
-numeric = X.select_dtypes(exclude=["object"]).columns
+numeric_features = X.columns.tolist()
 
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", SimpleImputer(strategy="mean"), numeric),
-        ("cat", Pipeline(steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore"))
-        ]), categorical)
+        ("num", SimpleImputer(strategy="mean"), numeric_features)
     ]
 )
 
@@ -53,19 +47,21 @@ clf.fit(X_train, y_train)
 # 2. Streamlit UI
 # =============================
 st.title("🌍 Exoplanet Habitability Classifier")
-st.write("Enter planet and star properties to predict habitability.")
+st.write("Adjust the sliders to input planet/star properties.")
 
-# Create input widgets for numeric + categorical
 user_data = {}
-for col in X.columns:
-    if col in numeric:
-        user_data[col] = st.number_input(f"{col}", value=0.0, format="%.5f")
-    else:
-        user_data[col] = st.text_input(f"{col}", "")
 
-# Prediction button
+user_data["pl_orbper"] = st.slider("Orbital Period (days)", 0.1, 10000.0, 365.0)
+user_data["pl_rade"] = st.slider("Planet Radius (Earth radii)", 0.1, 20.0, 1.0)
+user_data["pl_masse"] = st.slider("Planet Mass (Earth masses)", 0.1, 100.0, 1.0)
+user_data["pl_eqt"] = st.slider("Equilibrium Temperature (K)", 100.0, 3000.0, 288.0)
+user_data["st_teff"] = st.slider("Star Temperature (K)", 2000, 10000, 5800)
+user_data["sy_dist"] = st.slider("System Distance (parsecs)", 0.1, 1000.0, 10.0)
+
+# Convert to DataFrame
+user_df = pd.DataFrame([user_data])
+
 if st.button("Predict Habitability"):
-    user_df = pd.DataFrame([user_data])
     pred = clf.predict(user_df)[0]
     proba = clf.predict_proba(user_df)[0]
 
@@ -76,4 +72,3 @@ if st.button("Predict Habitability"):
         st.error(f"💀 Not Habitable (Confidence: {proba[0]*100:.2f}%)")
 
     st.write("Class probabilities:", proba)
-    
