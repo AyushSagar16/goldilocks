@@ -38,7 +38,7 @@ def fit_model():
 xgb, X_train, X_test, y_train, y_test = fit_model()
 
 # sdidebar info
-st.sidebar.header("📖 Description of Model")
+st.sidebar.header("Description of Model")
 st.sidebar.markdown(
     """
     This app uses an **XGBoost classifier** trained on exoplanet and stellar properties 
@@ -92,7 +92,7 @@ if st.button("Predict Habitability"):
     st.progress(p1)
 
 # Tabs
-tab1, tab2 = st.tabs(["📈 Model Insights", "🧪 Validation"])
+tab1, tab2 = st.tabs(["Model Insights", "Validation"])
 
 with tab1:
     st.subheader("Classification Report")
