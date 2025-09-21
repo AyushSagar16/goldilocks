@@ -97,8 +97,8 @@ tab1, tab2 = st.tabs(["📈 Model Insights", "🧪 Validation"])
 with tab1:
     st.subheader("Example Decision Tree")
     fig, ax = plt.subplots(figsize=(14, 8))
-    plot_tree(xgb, tree_idx=0, rankdir="LR", ax=ax)
-    st.pyplot(fig, width='stretch')
+    plot_tree(xgb, num_trees=0, ax=ax)
+    st.pyplot(fig, use_container_width=True)
 
 with tab2:
     st.subheader("ROC Curve & Confusion Matrix")
