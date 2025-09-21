@@ -4,7 +4,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from xgboost import XGBClassifier
+from xgboost import XGBClassifier, plot_tree
+import matplotlib.pyplot as plt
+
 
 # =============================
 # 1. Load Data
@@ -16,11 +18,7 @@ y = df["pl_hab"]
 
 numeric_features = X.columns.tolist()
 
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("num", SimpleImputer(strategy="mean"), numeric_features)
-    ]
-)
+
 
 scale_pos_weight = (y == 0).sum() / (y == 1).sum()
 
@@ -35,23 +33,24 @@ xgb = XGBClassifier(
     use_label_encoder=False
 )
 
-clf = Pipeline(steps=[("preprocessor", preprocessor),
-                     ("classifier", xgb)])
+
+
+
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, stratify=y, random_state=42
 )
-clf.fit(X_train, y_train)
+xgb.fit(X_train, y_train)
 
 # =============================
 # 2. Streamlit UI
 # =============================
-st.title("🌍 Exoplanet Habitability Classifier")
+st.title("Goldilocks: Exoplanet Habitability Classifier")
 st.write("Adjust the sliders to input planet/star properties.")
 
 user_data = {}
 
-user_data["pl_orbper"] = st.slider("Orbital Period (days)", 0.1, 10000.0, 365.0)
+user_data["pl_orbper"] = st.slider("Orbital Period (days)", 0.1, 1000.0, 365.0) # Changed to a reasonable max
 user_data["pl_rade"] = st.slider("Planet Radius (Earth radii)", 0.1, 20.0, 1.0)
 user_data["pl_masse"] = st.slider("Planet Mass (Earth masses)", 0.1, 100.0, 1.0)
 user_data["pl_eqt"] = st.slider("Equilibrium Temperature (K)", 100.0, 3000.0, 288.0)
@@ -62,8 +61,8 @@ user_data["sy_dist"] = st.slider("System Distance (parsecs)", 0.1, 1000.0, 10.0)
 user_df = pd.DataFrame([user_data])
 
 if st.button("Predict Habitability"):
-    pred = clf.predict(user_df)[0]
-    proba = clf.predict_proba(user_df)[0]
+    pred = xgb.predict(user_df)[0]
+    proba = xgb.predict_proba(user_df)[0]
 
     st.subheader("Prediction Result:")
     if pred == 1:
@@ -71,4 +70,23 @@ if st.button("Predict Habitability"):
     else:
         st.error(f"💀 Not Habitable (Confidence: {proba[0]*100:.2f}%)")
 
-    st.write("Class probabilities:", proba)
+    # st.write("Class probabilities:", proba)
+
+    # =============================
+    # 3. Horizontal Probability Bar Chart
+    # =============================
+    labels = ["Not Habitable (0)", "Potentially Habitable (1)"]
+    colors = ["red", "green"]
+
+    fig, ax = plt.subplots(figsize=(6, 2))
+    bars = ax.barh(labels, proba, color=colors)
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("Probability")
+    ax.set_title("Prediction Probability Distribution")
+
+    # Add text labels on bars
+    for bar, p in zip(bars, proba):
+        ax.text(p + 0.01, bar.get_y() + bar.get_height()/2,
+                f"{p*100:.2f}%", va="center")
+
+
