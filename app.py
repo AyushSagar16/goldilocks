@@ -3,23 +3,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 from xgboost import XGBClassifier, plot_tree
 
-# ---------- Page setup ----------
+# streamlit title and icon
 st.set_page_config(page_title="Goldilocks: Exoplanet Habitability", page_icon="🪐", layout="wide")
 
-# ---------- Load data ----------
+# load data
 df = pd.read_csv("Exoplanet_Dataset_Cleaned_Filtered.csv")
 X = df.drop(columns=["pl_name", "pl_hab"])
 y = df["pl_hab"].astype(int)
 numeric_features = X.columns.tolist()
 
-# ---------- Preprocessing & model ----------
-preprocessor = ColumnTransformer([("num", SimpleImputer(strategy="mean"), numeric_features)])
+# Handle class imbalance
 scale_pos_weight = (y == 0).sum() / max(1, (y == 1).sum())
 
 xgb = XGBClassifier(
@@ -42,7 +38,7 @@ def fit_model():
 
 xgb, X_train, X_test, y_train, y_test = fit_model()
 
-# ---------- Sidebar description ----------
+# sdidebar info
 st.sidebar.header("📖 Description of Model")
 st.sidebar.markdown(
     """
@@ -58,7 +54,7 @@ st.sidebar.markdown(
     """
 )
 
-# ---------- UI: inputs ----------
+# title and sliders
 st.title("🪐 Goldilocks: Exoplanet Habitability Classifier")
 st.caption("Move the sliders, hit **Predict**, and explore model insights.")
 
@@ -82,8 +78,8 @@ user_df = pd.DataFrame([{
     "sy_dist": sy_dist,
 }])
 
-# ---------- Predict ----------
-if st.button("🔮 Predict Habitability"):
+# prediction button
+if st.button("Predict Habitability"):
     proba = xgb.predict_proba(user_df)[0]
     p1 = float(proba[1])
     pred = int(xgb.predict(user_df)[0])
@@ -91,19 +87,19 @@ if st.button("🔮 Predict Habitability"):
     
     
     if pred == 1:
-        st.success(f"🌱 **Potentially Habitable**\n\nConfidence: **{p1*100:.2f}%**")
+        st.success(f"**Potentially Habitable**\n\nConfidence: **{p1*100:.2f}%**")
     else:
-        st.error(f"💀 **Not Habitable**\n\nConfidence: **{(1-p1)*100:.2f}%**")
-    st.progress(p1)  # gauge-style
+        st.error(f"**Not Habitable**\n\nConfidence: **{(1-p1)*100:.2f}%**")
+    st.progress(p1)
 
-# ---------- Tabs for insights ----------
+# Tabs
 tab1, tab2 = st.tabs(["📈 Model Insights", "🧪 Validation"])
 
 with tab1:
-    st.subheader("First tree")
+    st.subheader("Example Decision Tree")
     fig, ax = plt.subplots(figsize=(14, 8))
-    plot_tree(xgb, num_trees=0, rankdir="LR", ax=ax)
-    st.pyplot(fig, use_container_width=True)
+    plot_tree(xgb, tree_idx=0, rankdir="LR", ax=ax)
+    st.pyplot(fig, width='stretch')
 
 with tab2:
     st.subheader("ROC Curve & Confusion Matrix")
@@ -118,7 +114,7 @@ with tab2:
         ax.plot([0,1],[0,1], lw=1, linestyle="--")
         ax.set_xlabel("False Positive Rate"); ax.set_ylabel("True Positive Rate")
         ax.set_title("ROC Curve"); ax.legend(loc="lower right")
-        st.pyplot(fig, use_container_width=True)
+        st.pyplot(fig, width='stretch')
     with c2:
         y_pred_thr = xgb.predict(X_test)
         cm = confusion_matrix(y_test, y_pred_thr, labels=[0,1])
@@ -130,5 +126,5 @@ with tab2:
         for (i,j), v in np.ndenumerate(cm):
             ax.text(j, i, int(v), ha="center", va="center")
         ax.set_title("Confusion Matrix")
-        st.pyplot(fig, use_container_width=True)
+        st.pyplot(fig, width='stretch')
     
